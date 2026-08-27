@@ -4,6 +4,24 @@ from datetime import datetime
 
 NOME_BANCO = "barbearia.db"
 
+# 📌 NOVO: FUNÇÃO QUE GARANTE QUE A TABELA EXISTE NA NUVEM
+def inicializar_banco():
+    conexao = sqlite3.connect(NOME_BANCO)
+    cursor = conexao.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS agendamentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cliente_name TEXT NOT NULL,
+            dia_horario TEXT NOT NULL UNIQUE,
+            status_pagamento TEXT DEFAULT 'Pendente'
+        )
+    """)
+    conexao.commit()
+    conexao.close()
+
+# Executa a criação da tabela logo na abertura do app
+inicializar_banco()
+
 # Título Principal da Página
 st.set_page_config(page_title="Barbearia do Chefe", layout="centered")
 st.title("🪮 Barbearia do Chefe - Sistema de Agendamentos")
@@ -30,7 +48,7 @@ with aba_cliente:
     
     horas_ocupadas = []
     for registro in agendamentos_do_dia:
-        hora_texto = registro[0].split(" ")[1]
+        hora_texto = registro[0].split(" ")[1] # Ajuste fino para extrair a hora corretamente
         horas_ocupadas.append(hora_texto)
     
     horarios_filtrados = [hora for hora in todos_horarios_expediente if hora not in horas_ocupadas]
@@ -68,7 +86,7 @@ with aba_cliente:
                     st.error("❌ Ops! Ocorreu um conflito. Escolha outra opção.")
 
 # ----------------------------------------------------
-# 2. TELA DO DONO DA BARBEARIA (COM OPÇÃO DE RECONHECER E REMOVER)
+# 2. TELA DO DONO DA BARBEARIA
 # ----------------------------------------------------
 with aba_dono:
     st.header("Área Restrita")
@@ -91,7 +109,6 @@ with aba_dono:
         else:
             for agen in agendamentos:
                 with st.container(border=True):
-                    # Dividimos o espaço em 4 colunas para incluir o botão de deletar
                     col1, col2, col3, col4 = st.columns(4)
                     
                     with col1:
@@ -117,14 +134,13 @@ with aba_dono:
                             st.write("Concluído")
                     
                     with col4:
-                        # Botão vermelho para excluir o agendamento
                         if st.button("🗑️ Remover", key=f"btn_del_{agen['id']}", type="secondary", use_container_width=True):
                             conexao = sqlite3.connect(NOME_BANCO)
                             cursor = conexao.cursor()
                             cursor.execute("DELETE FROM agendamentos WHERE id = ?", (agen['id'],))
                             conexao.commit()
                             conexao.close()
-                            st.rerun() # Atualiza a tela imediatamente
+                            st.rerun()
                             
     elif senha_digitada != "":
         st.error("Senha incorreta! Tente novamente.")
